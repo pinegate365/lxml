@@ -3,6 +3,8 @@ from __future__ import absolute_import
 from docstructure import SITE_STRUCTURE, HREF_MAP, BASENAME_MAP
 from lxml.etree import (parse, fromstring, ElementTree,
                         Element, SubElement, XPath, XML)
+import glob
+import hashlib
 import os
 import re
 import sys
@@ -146,6 +148,20 @@ def inject_donate_buttons(lxml_path, rst2html_script, tree):
     finance_div.addnext(legal)
 
 
+def inject_banner(parent):
+    banner = parent.makeelement('div', {'class': 'banner'})
+    parent.insert(0, banner)
+
+    banner_image = SubElement(banner, 'div', {'class': "banner_image"})
+    SubElement(banner_image, 'img', src="python-xml-title.png")
+
+    banner_text = SubElement(banner, 'div', {'class': "banner_link"})
+    banner_link = SubElement(banner_text, 'a', href="index.html#support-the-project")
+    banner_link.text = "Like the tool? "
+    SubElement(banner_link, 'br', {'class': "first"}).tail = "Help making it better! "
+    SubElement(banner_link, 'br', {'class': "second"}).tail = "Your donation helps!"
+
+
 def rest2html(script, source_path, dest_path, stylesheet_url):
     command = ('%s %s %s --stylesheet=%s --link-stylesheet %s > %s' %
                (sys.executable, script, RST2HTML_OPTIONS,
@@ -185,9 +201,23 @@ def publish(dirname, lxml_path, release):
     doc_dir = os.path.join(lxml_path, 'doc')
     script = os.path.join(doc_dir, 'rest2html.py')
     pubkey = os.path.join(doc_dir, 'pubkey.asc')
-    stylesheet_url = 'style.css'
+    stylesheet_file = 'style.css'
 
     shutil.copy(pubkey, dirname)
+    # FIXME: find a way to make hashed filenames work both locally and in the versioned directories.
+    stylesheet_url = stylesheet_file
+    """
+    style_file_pattern = "style_%s.css"
+    for old_stylesheet in glob.iglob(os.path.join(dirname, style_file_pattern % "*")):
+        os.unlink(old_stylesheet)
+    with open(os.path.join(dirname, stylesheet_file), 'rb') as f:
+        css = f.read()
+        checksum = hashlib.sha256(css).hexdigest()[:32]
+
+        stylesheet_url = style_file_pattern % checksum
+        with open(os.path.join(dirname, stylesheet_url), 'wb') as out:
+            out.write(css)
+    """
 
     href_map = HREF_MAP.copy()
     changelog_basename = 'changes-%s' % release
@@ -215,6 +245,8 @@ def publish(dirname, lxml_path, release):
     menu = Element("div", {'class': 'sidemenu', 'id': 'sidemenu'})
     SubElement(menu, 'div', {'class': 'menutrigger', 'onclick': 'trigger_menu(event)'}).text = "Menu"
     menu_div = SubElement(menu, 'div', {'class': 'menu'})
+    inject_banner(menu_div)
+
     # build HTML pages and parse them back
     for section, text_files in SITE_STRUCTURE:
         section_head = make_menu_section_head(section, menu_div)
@@ -233,6 +265,9 @@ def publish(dirname, lxml_path, release):
 
                 rest2html(script, path, outpath, stylesheet_url)
                 tree = parse(outpath)
+
+                page_div = tree.getroot()[1][0]  # html->body->div[class=document]
+                inject_banner(page_div)
 
                 if filename == 'main.txt':
                     # inject donation buttons
