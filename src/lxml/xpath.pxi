@@ -92,7 +92,7 @@ cdef class _XPathContext(_BaseContext):
             xpath.xmlXPathRegisterVariable(
                 self._xpathCtxt, _xcstr(name_utf), _wrapXPathObject(value, None, None))
 
-    cdef registerVariable(self, name, value):
+    cpdef registerVariable(self, name, value):
         name_utf = self._to_utf(name)
         xpath.xmlXPathRegisterVariable(
             self._xpathCtxt, _xcstr(name_utf), _wrapXPathObject(value, None, None))

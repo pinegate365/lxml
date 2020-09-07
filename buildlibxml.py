@@ -26,17 +26,22 @@ except:
 # use pre-built libraries on Windows
 
 def download_and_extract_windows_binaries(destdir):
-    url = "https://github.com/mhils/libxml2-win-binaries/releases"
-    filenames = list(_list_dir_urllib(url))
+    if True:
+        #url = "https://github.com/mhils/libxml2-win-binaries/releases"
+        url = "https://github.com/pinegate365/libxml2-win-binaries/releases"
+        filenames = list(_list_dir_urllib(url))
+        release_path = "/download/%s/" % find_max_version(
+            "library release", filenames, re.compile(r"/releases/tag/([0-9.]+[0-9])$"))
+        url += release_path
 
-    release_path = "/download/%s/" % find_max_version(
-        "library release", filenames, re.compile(r"/releases/tag/([0-9.]+[0-9])$"))
-    url += release_path
-    filenames = [
-        filename.rsplit('/', 1)[1]
-        for filename in filenames
-        if release_path in filename
-    ]
+        filenames = [
+            filename.rsplit('/', 1)[1]
+            for filename in filenames
+            if release_path in filename
+        ]
+    else:
+        url = "http://localhost/releases/"
+        filenames = list(_list_dir_urllib(url))
 
     arch = "win64" if sys.maxsize > 2**32 else "win32"
     if sys.version_info < (3, 5):
